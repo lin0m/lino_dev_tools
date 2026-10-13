@@ -12,12 +12,12 @@ The modules provided in this package can improve your already-built Python proje
 
 ## Installation
 
-###Requirements:
+### Requirements:
 
 - Python 3.13 or newer
 - macOS
 
-###Dependencies:
+### Dependencies:
 
 - readchar >= 4.0.0
 
