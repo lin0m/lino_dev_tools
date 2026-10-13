@@ -96,18 +96,6 @@ def print_and_wait(*objects:            Any,
     finally:
         termios.tcsetattr(file_descriptor, termios.TCSADRAIN, old_settings)
 
-    # # print
-    # print(*objects, sep=sep, end=end, file=file, flush=flush)
-
-    # # wait for key to be pressed
-    # file_descriptor = sys.stdin.fileno()
-    # old_settings = termios.tcgetattr(file_descriptor)
-    # try:
-    #     tty.setraw(file_descriptor)             # set terminal to raw mode
-    #     termios.tcflush(file_descriptor, termios.TCIFLUSH)
-    #     input_char = sys.stdin.read(1)          # read a single character
-    # finally:
-    #     termios.tcsetattr(file_descriptor, termios.TCSADRAIN, old_settings)     # restore terminal
     return input_char
 
 def select_option(options:              list[Any],
