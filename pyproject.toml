@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "lino-dev-tools"
+version = "0.1.0"
+description = "My personal python package with the tools I like to use when programming."
+readme = "README.md"
+requires-python = ">=3.13"
+keywords = ["lino", 
+            "dev tools",
+            "developer tools",
+            "python utilities",
+            "terminal ui",
+            "cli"]
+
+authors = [
+    { name = "Lino Mercado-Esquivias" }
+]
+
+dependencies = [
+    "readchar>=4.0.0"
+]
+
+license = "MIT"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: MacOS :: MacOS X"
+]
+
+
+[project.urls]
+Repository = "https://github.com/lin0m/lino_dev_tools.git"
+Issues = "https://github.com/lin0m/lino_dev_tools/issues"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
