@@ -4,11 +4,11 @@ the functions via an interactive demo, run this script.
 
 * print_and_wait(): Prints and then waits for the user to press any key.
 * select_option(): Allows the user to select an option from a list by using a text-based user
-  interface (TUI) controlled by the arrow keys and `Enter`.
+  interface (TUI).
 * select_folder(): Allows the user to select a folder in the file system by either using a
   text-based user interface (TUI) or by typing a folder path manually.
 * select_folder_using_tui(): Allows the user to select a folder in the file system by using a
-  text-based user interface (TUI) controlled by the arrow keys and `Enter`.
+  text-based user interface (TUI).
 
 Author: Lino Mercado_Esquivias
 '''
@@ -47,6 +47,7 @@ except ImportError as e:
 __all__ = [
     "print_and_wait",
     "select_option",
+    "select_options",
     "select_folder",
     "select_folder_using_tui",
 ]
@@ -192,6 +193,156 @@ def select_option(options:              list[Any],
                     if not error_message: 
                         return selected_option
                     terminal_ui.error_message = error_message
+                    terminal_ui.render()
+                # b
+                elif key.lower() == 'b':
+                    return None
+                # q
+                elif key.lower() == 'q':
+                    raise KeyboardInterrupt
+
+    finally:
+        # always restore terminal and cursor
+        signal.signal(signal.SIGWINCH, previous_handler)
+        termios.tcsetattr(file_descriptor, termios.TCSADRAIN, old_settings)
+        print(RESET_TERMINAL, end='')
+
+def select_options(options:             list[Any],
+                   header_message:      str                         = "Select options from below.",
+                   validation_function: Callable[[list[Any]], str]  = None,
+                   max_selections:      int                         = None
+                   ) -> list[Any]:
+    """
+    This function allows the user to select several options from a list by using a fancy text-based user
+    interface (TUI).
+
+    Parameters:
+        options (list[Any]):                        The list of options to choose from.
+
+        header_message (str):                       Header message printed at the top. Can be used to
+                                                    display instructions or explain the content on the
+                                                    screen.
+
+        validation_function (Callable[[Any], str]): An optional function used to validate the user's
+                                                    selections. The function must return a string upon
+                                                    failure or None or emptry string on success. The
+                                                    string returned is printed as an error message up
+                                                    top in red.
+
+        max_selections (int):                       The maximum number of selections the user is allowed
+                                                    to make.
+
+    Returns:
+        selected_options (list[Any]):               The selected options or `None` if the user selects
+                                                    the 'Go Back' option.
+    TODO:
+        - Maybe add like a parameter for a second type of crazy validation function that will actively
+          validate selections as they're checked as opposed to after the selections have been finalized.
+          Can't see a use case for this though.
+    """
+
+    # validate arguments
+    if not isinstance(options, list):
+        raise TypeError("options must be a list")
+    for option in options:
+        if type(option) == str and '\n' in option:
+            raise ValueError("new line character not allowed in options")
+    if len(options) < 2:
+        raise ValueError("options must have two or more elements")
+    if not isinstance(header_message, str):
+        raise TypeError("header must be a string")
+    if validation_function is not None and not callable(validation_function):
+        raise TypeError("validation_function must be None or a Callable that returns a string")
+    if not isinstance(max_selections, int) and max_selections is not None:
+        raise TypeError("max_selections must be an integer")
+    if max_selections is not None and max_selections <= 0:
+        raise ValueError("max_selections must be be greater than or equal to one")
+    if not header_message and max_selections:
+        header_message = f"Select up to {max_selections} options from below."
+    elif not header_message:
+        header_message = f"Select up to {max_selections} options from below."
+
+    # initialize variables
+    global terminal_resized
+    terminal_resized = False
+    file_descriptor = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(file_descriptor)
+    error_message = ''
+    key_binds = {"ARROW KEYS": "Navigate",
+                 "ENTER": "Finilize Selection",
+                 "S": "Select Option",
+                 "B": "Go Back",
+                 "Q": "Quit"}  
+    terminal_ui = _TerminalUI(options,
+                              error_message,
+                              header_message,
+                              '',
+                              key_binds,
+                              True,
+                              max_selections) 
+    key = ''
+
+    try:
+        previous_handler = signal.getsignal(signal.SIGWINCH)
+        signal.signal(signal.SIGWINCH, _handle_resize)
+        tty.setcbreak(file_descriptor)
+
+        while True:
+            # hide cursor
+            print(RESET_TERMINAL, end='')
+            print(HIDE_CURSOR, end='')
+
+            # print ui
+            print(terminal_ui, end='', flush=True)
+
+            # monitor terminal resize and key press
+            key_pressed, _, _ = select.select([file_descriptor], [], [], 0.1)
+
+            # re-render ui
+            if terminal_resized:
+                terminal_resized = False
+                terminal_ui.render()
+                continue
+
+            # process key
+            if key_pressed:
+                key = _read_key(file_descriptor)
+                # ignore key if terminal is too small
+                if not terminal_ui.pages[terminal_ui.current_page_index].printable:
+                    continue
+                # arrow keys
+                if terminal_ui.process_key(key):
+                    terminal_ui.render()
+                    continue
+                # enter
+                if key == readchar.key.ENTER:
+                    selected_indices = [index for index,checkbox in enumerate(terminal_ui.checkboxes)
+                                        if checkbox == 'x']
+                    selected_options = [terminal_ui.options[index] for index in selected_indices]
+                    if validation_function:
+                        error_message = validation_function(selected_options)
+                    else:
+                        return selected_options
+                    if not error_message: 
+                        return selected_options
+                    terminal_ui.error_message = error_message
+                    terminal_ui.render()
+                # s
+                elif key.lower() == 's':
+                    terminal_ui.error_message = ''
+                    index = terminal_ui.current_selection
+                    max_selections = (terminal_ui.max_selections is not None and \
+                                      terminal_ui.selection_counter >= terminal_ui.max_selections)
+                    if terminal_ui.checkboxes[index] == ' ' and max_selections:
+                        terminal_ui.error_message = f"Only {terminal_ui.max_selections} allowed"
+                        terminal_ui.render()
+                        continue
+                    elif terminal_ui.checkboxes[index] == ' ':
+                        terminal_ui.checkboxes[index] = 'x'
+                        terminal_ui.selection_counter += 1
+                    elif terminal_ui.checkboxes[index] == 'x':
+                        terminal_ui.checkboxes[index] = ' '
+                        terminal_ui.selection_counter -= 1
                     terminal_ui.render()
                 # b
                 elif key.lower() == 'b':
@@ -1284,6 +1435,8 @@ class _TerminalUI:
                                                        "ENTER" : "Make Selection",
                                                        "B" : "Go Back",
                                                        "Q" : "Quit"},
+                 multiple_selections:   bool        = False,
+                 max_selections:        int         = None,
                  print_header_on_error: bool        = True,
                  ) -> None:
         """
@@ -1308,6 +1461,12 @@ class _TerminalUI:
                                                             "B" : "Go Back",
                                                             "Q" : "Quit"}}
 
+            multiple_selections (bool):         Whether to allow the user to select more than one 
+                                                option.
+
+            max_selections (int):               If multiple_selections is `True`, the maximum number of
+                                                selections allowed.
+
             print_header_on_error (bool):       Whether to also print the header message when there is 
                                                 an error message. Defaults to True.
             
@@ -1327,7 +1486,11 @@ class _TerminalUI:
         self.header_message = header_message
         self.directory = directory
         self.key_binds = key_binds
+        self.multiple_selections = multiple_selections
+        self.max_selections = max_selections
         self.print_header_on_error = print_header_on_error
+        self.checkboxes = [' '] * len(options)
+        self.selection_counter = 0
         self.pages = []
         self.current_page_index = 0
         self.current_selection = 0
@@ -1380,7 +1543,7 @@ class _TerminalUI:
         # handle edge selections after rendering
         # (this occurs when resizing so fast that the selection moves to another page)
         if self.current_page_index >= len(self.pages):
-            self.current_page_index = len(self.pages)-1
+            self.current_page_index = len(self.pages) - 1
         body = self.pages[self.current_page_index].body
         if selection_first:
             self.current_selection = body.rows[0].list_index
@@ -1509,7 +1672,10 @@ class _TerminalUI:
             # reset row variables
             current_row = ''
             current_row_height = 0
-            string_option = str(option)
+            if self.multiple_selections:
+                string_option = '[' + self.checkboxes[index] + '] ' + str(option)
+            else:
+                string_option = str(option)
             current_row += string_option
             current_row_height += max(1, math.ceil(len(string_option) / terminal_width))
 

@@ -45,17 +45,18 @@ LEVEL_TO_STR = {DEBUG:"DEBUG",INFO:"INFO",WARNING:"WARNING",ERROR:"ERROR",CRITIC
 
 class LogEntry:
     def __init__(self,
-                 date: datetime,
-                 level: int,
-                 script: str,
-                 function: str,
-                 session_number: int,
-                 entry_number: int,
-                 reference_number: int,
-                 message: str
+                 date:              datetime,
+                 level:             int,
+                 script:            str,
+                 function:          str,
+                 session_number:    int,
+                 entry_number:      int,
+                 reference_number:  int,
+                 message:           str
                  ) -> None:
         """
-        This method initializes a LogEntry object.
+--------------------------------------------------------------------------------------------------------
+        Constructs a LogEntry object.
 
         Parameters:
             date (datetime):            The date the entry was created in the following format:
@@ -93,13 +94,13 @@ class LogEntry:
 
     def __str__(self) -> str:
         """
-        This method returns the string to print when a LogEntry object is printed.
+        Returns the LogEntry as a string.
 
         Parameters:
             None
 
         Returns:
-            string_entry (str):         The string to print when a LogEntry object is printed.
+            string_entry (str):         LogEntry as a string.
         """
 
         string_entry = f"DATE: {self.date} | "
@@ -114,20 +115,23 @@ class LogEntry:
         return string_entry
         
     def to_string(self,
-                 include_date: bool = True,
-                 include_level: bool = True,
-                 include_script: bool = True,
-                 include_function: bool = True,
-                 include_session_number: bool = True,
-                 include_entry_number: bool = True,
-                 include_reference_number: bool = True,
-                 include_message: bool = True
-                 ) -> str:
+                  delimiter:                str = '|',
+                  include_date:             bool = True,
+                  include_level:            bool = True,
+                  include_script:           bool = True,
+                  include_function:         bool = True,
+                  include_session_number:   bool = True,
+                  include_entry_number:     bool = True,
+                  include_reference_number: bool = True,
+                  include_message:          bool = True
+                  ) -> str:
         """
-        This method returns the entry as a string. All the parameters are optional booleans that
-        determine what fields to include in the string.
+        Returns the LogEntry as a string. Optional parameters determine what fields are included in the
+        string.
 
         Parameters:
+            delimiter (str):                        The delimiter between each field.
+
             include_date (bool):                    Whether to include the date field in the string.
 
             include_level (bool):                   Whether to include the level field in the
@@ -152,7 +156,7 @@ class LogEntry:
                                                     string.
 
         Returns:
-            string_entry (str):                     The entry as a string.
+            string_entry (str):                     LogEntry as a string.
         """
 
         # validate arguments
@@ -191,17 +195,17 @@ class LogEntry:
         if include_message:
             field_value_pairs.append(f"MESSAGE: {self.message}")
 
-        string_entry = " | ".join(field_value_pair for field_value_pair in field_value_pairs)
+        string_entry = f" {delimiter} ".join(field_value_pair for field_value_pair in field_value_pairs)
 
         return string_entry
 
 class LogEntries:
     def __init__(self, log_entries: list[LogEntry]) -> None:
         """
-        This method initializes a LogEntries object.
+        Constructs a LogEntries object.
 
         Parameters:
-            log_entries (list[LogEntry]):       A list of log entries.
+            log_entries (list[LogEntry]):       A list of LogEntry objects.
 
         Returns:
             None
@@ -210,8 +214,8 @@ class LogEntries:
 
     def dates(self) -> list[date]:
         """
-        This method returns a list of dates for which there exist log entries. The list is sorted
-        from newest to oldest date.
+        Returns a list of dates for which there exist log entries. The list is sorted from newest to
+        oldest date.
 
         Parameters:
             None
@@ -235,8 +239,7 @@ class LogEntries:
                message_filter:          list[str]           = ''
                ) -> "LogEntries":
         """
-        This method accepts filters and returns log entries that match the filters
-        provided.
+        Returns a LogEntries subset that matches the filters provided.
 
         Parameters:
             date_filter (tuple[datetime]):      Either a single datetime object or a date range
@@ -265,7 +268,7 @@ class LogEntries:
                                                 field.
 
         Returns:
-            filtered_log_entries (LogEntries):  Returns all log entries matching the filters.
+            filtered_log_entries (LogEntries):  The LogEntries subset that matches the filters provided.
         """
         
         # validate and normalize arguments
@@ -322,8 +325,7 @@ class LogEntries:
 
     def _validate_date_filter(date_filter: tuple[datetime]) -> tuple[datetime]:
         """
-        This method is called by the filter() method. It validates and normalizes the filter()
-        method's date_filter parameter.
+        Validates and normalizes the filter() method's date_filter parameter.
 
         Parameters:
             date_filter (tuple[datetime]):      Either a single datetime object or a date range
@@ -368,7 +370,7 @@ class LogEntries:
         
     def print(self, visible_lines: int = 15) -> None:
         """
-----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
         This function prints every log event given. Optionally, parameters can be provided to
         filter which events are returned.
 
@@ -505,7 +507,7 @@ class LogEntries:
 class Log:
     def __init__(self, log_folder_path: str = None) -> None:
         """
-        This function initializes a Log object:
+        Constructs a Log object:
             - creates the log file if it doesn't exist
             - gets the namespace logger and adds a handler and formatter
             - loads the next session number and the next entry number from the log file
@@ -564,6 +566,16 @@ class Log:
         self.sessions = None
         
     def _load_state(self) -> dict:
+        """
+        Opens the state file and returns the state of the log as a dictionary.
+
+        Parameters:
+            None            
+
+        Returns:
+            raw_state (dict):       A dictionary representing the log's raw state.
+        """
+
         try:
             # load state
             with open(self._state_path, "r", encoding="utf-8") as f:
@@ -583,16 +595,15 @@ class Log:
 
     def _load_state_manually(self) -> tuple[int, int]:
         """
-        This method is called by the init() method when a Log object is instantiated. It opens the
-        log file, checks the last entry, and returns the next session number and the next entry
-        number.
+        Opens the log file, checks the last entry, and returns the next session number and the next
+        entry number.
 
         Parameters:
             None            
 
         Returns:
-            log_state (tuple):          A tuple containing the next session number and next entry
-                                        number.
+            log_state (tuple[int, int]):    A tuple containing the next session number and next entry
+                                            number.
         """
         
         try:
@@ -630,13 +641,13 @@ class Log:
     
     def read(self) -> LogEntries:
         """
-        This method loads all entries from the log file.
+        Reads all LogEntries in the log file.
 
         Parameters:
             None
 
         Returns:
-            log_entries (LogEntries):               Returns all entries in the log file.
+            log_entries (LogEntries):           All LogEntries in the log file.
         """
 
         log_entries = []
@@ -649,21 +660,21 @@ class Log:
     
     def write(self, level: int, message: Any, reference_number: int = 0) -> bool:
         """
-        This function writes a new log entry.
+        Writes a new LogEntry.
 
         Parameters:
-            level (int):                Must be one of the following constants: DEBUG, INFO,
-                                        WARNING, ERROR, or CRITICAL. Also known as 'severity' in the
-                                        logging module.
+            level (int):                Must be one of the following constants: DEBUG, INFO, WARNING,
+                                        ERROR, or CRITICAL. Also known as 'severity' in the logging
+                                        module.
 
             message (Any):              The entry message.
 
-            reference_number (int):     This optional parameter corresponds to the entry's
-                                        'REFERENCE' field, used to group a chain of realted entries.
-                                        Should contain the entry number of a related entry.
+            reference_number (int):     Optional parameter. Corresponds to the entry's 'REFERENCE'
+                                        field, used to group a chain of realted entries. Should contain
+                                        the entry number of a related entry.
 
         Returns:
-            (bool):                     Returns 'True' on success.
+            success (bool):             Returns `True` on success.
         """
 
         # validate arguments
@@ -695,8 +706,8 @@ class Log:
     
     def new_session(self) -> None:
         """
-        This function creates a new log session by incrementing the session counter. Any new log 
-        entries are part of the new session.
+        Creates a new log session by incrementing the session counter. Any new LogEntry is part of the
+        new session.
 
         Parameters:
             None            
@@ -709,8 +720,7 @@ class Log:
 
 def to_log_entry(string_entry: str) -> LogEntry:
     """
-    This function takes a log entry in string form, parses it, and returns it as a LogEntry
-    object.
+    Takes a log entry in string form, parses it, and returns it as a LogEntry object.
 
     Parameters:
         string_entry (str):             A log entry in string form.
