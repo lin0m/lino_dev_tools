@@ -1379,6 +1379,8 @@ class _TerminalUI:
 
         # handle edge selections after rendering
         # (this occurs when resizing so fast that the selection moves to another page)
+        if self.current_page_index >= len(self.pages):
+            self.current_page_index = len(self.pages)-1
         body = self.pages[self.current_page_index].body
         if selection_first:
             self.current_selection = body.rows[0].list_index
