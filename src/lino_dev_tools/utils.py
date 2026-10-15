@@ -208,7 +208,7 @@ def select_option(options:              list[Any],
         print(RESET_TERMINAL, end='')
 
 def select_options(options:             list[Any],
-                   header_message:      str                         = "Select options from below.",
+                   header_message:      str                         = '',
                    validation_function: Callable[[list[Any]], str]  = None,
                    max_selections:      int                         = None
                    ) -> list[Any]:
@@ -221,7 +221,9 @@ def select_options(options:             list[Any],
 
         header_message (str):                       Header message printed at the top. Can be used to
                                                     display instructions or explain the content on the
-                                                    screen.
+                                                    screen. Despite defaulting to an empty string,
+                                                    header_message is initialized below in the
+                                                    validation section.
 
         validation_function (Callable[[Any], str]): An optional function used to validate the user's
                                                     selections. The function must return a string upon
@@ -239,6 +241,7 @@ def select_options(options:             list[Any],
         - Maybe add like a parameter for a second type of crazy validation function that will actively
           validate selections as they're checked as opposed to after the selections have been finalized.
           Can't see a use case for this though.
+        - Add feature to force the user to choose n options.
     """
 
     # validate arguments
@@ -260,7 +263,7 @@ def select_options(options:             list[Any],
     if not header_message and max_selections:
         header_message = f"Select up to {max_selections} options from below."
     elif not header_message:
-        header_message = f"Select up to {max_selections} options from below."
+        header_message = f"Select options from below."
 
     # initialize variables
     global terminal_resized

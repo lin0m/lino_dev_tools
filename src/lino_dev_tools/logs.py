@@ -8,11 +8,6 @@ around python's logging module for simplified logging with none of the fuzz.
 * log.read(): Returns all log entries as a LogEntries object.
 * log.new_session(): Creates a new log session.
 
-TODO:
-    - create log_state.json with
-        - next entry #
-        - next session #
-        - session history (sessions per date and session entry count)
 Author: Lino Mercado_Esquivias
 '''
 
@@ -55,7 +50,6 @@ class LogEntry:
                  message:           str
                  ) -> None:
         """
---------------------------------------------------------------------------------------------------------
         Constructs a LogEntry object.
 
         Parameters:
@@ -160,6 +154,10 @@ class LogEntry:
         """
 
         # validate arguments
+        if not isinstance(delimiter, str):
+            raise TypeError("delimiter must be a string")
+        if len(delimiter) != 1:
+            raise ValueError("delimiter must be exactly one character long")
         arguments_to_validate = {
             "include_date": include_date,
             "include_level": include_level,
@@ -368,144 +366,8 @@ class LogEntries:
         
         raise TypeError("date_filter must be of type datetime or tuple[datetime, datetime]")
         
-    def print(self, visible_lines: int = 15) -> None:
-        """
---------------------------------------------------------------------------------------------------------
-        This function prints every log event given. Optionally, parameters can be provided to
-        filter which events are returned.
-
-        Parameters:
-            function_filter (list[str]):        A list of function names. Filters for events created
-                                                by any of the provided functions.
-
-            session_filter (list[int]):         A list of session ids. Filters for events from any
-                                                of the provided sessions.
-
-        Returns:
-            filtered_log_events (list[dict]):   Returns a list of events matching the filters. Each
-                                                event is a dictionary with elements
-                                                {field_name : value}.
-        """
-
-        # validate arguments
-        if not isinstance(visible_lines, int):
-            raise TypeError("'visible_lines' must be an intiger")
-        if visible_lines < 1:
-            raise ValueError("'visible_lines' must be positive")
-                
-        # initialize variables
-        header = ''
-        current_selection = 0
-        next_selection = 0
-        selection_offset = 0
-        current_page = 0
-        next_page = 0
-        window_start = 0
-        pages = len(self.self.log_entries)//visible_lines
-        if len(self.self.log_entries)%visible_lines != 0:
-            pages += 1
-        if pages > 1:
-            print_footer = True
-        else:
-            print_footer = False
-        padding = visible_lines - (len(self.log_entries)%visible_lines)
-        columns_to_print ={"DATE": True,
-                        "LEVEL": True,
-                        "SCRIPT": False,
-                        "FUNCTION": False, 
-                        "SESSION#": True,
-                        "ENTRY#": False,
-                        "REFERENCE#": False,
-                        "MESSAGE": True}
-        
-        try:
-            # hide cursor
-            print(RESET_TERMINAL, end='')
-            print(HIDE_CURSOR, end='')
-
-            while True:
-                # print header and instructions
-                print(f"{RED}{header}{RESET}")
-                print(f"{DISABLE}(Use the {RESET+BOLD}Arrow Keys{RESET+DISABLE} to ", end='')
-                print(f"navigate. Press {RESET+BOLD}Enter{RESET+DISABLE} to select an ", end='')
-                print(f"event. Press {RESET+BOLD}q{RESET+DISABLE} to cancel.){RESET}")
-
-                # check if user changed selection or page
-                selection_offset = current_selection - window_start
-                if next_page != current_page:
-                    current_page = next_page
-                    window_start = current_page * visible_lines
-                    current_selection = window_start + selection_offset
-                    if current_selection >= len(self.log_entries):
-                        current_selection = len(self.log_entries) - 1
-                    next_selection = current_selection
-                elif next_selection != current_selection:
-                    current_selection = next_selection
-                    current_page = current_selection//visible_lines
-                    next_page = current_page
-                    window_start = current_page * visible_lines
-
-                # determine visible events
-                next_window_start = window_start + visible_lines
-                if not self.log_entries:
-                    print(f"{RED}No events{RESET}")
-                    visible_events = []
-                else:
-                    visible_events = self.log_entries[window_start:next_window_start]
-
-                # print visible events
-                for index, event in enumerate(visible_events):
-                    actual_index = window_start + index
-                    if actual_index == current_selection:
-                        line = f"{LIGHT_GRAY_BCKGND} | ".join(
-                            f"{LIGHT_GRAY_BCKGND}{YELLOW}{field}: {GREEN}{event[field]:^10}{RESET}"
-                            for field, enabled in columns_to_print.items()
-                            if enabled
-                        )
-                        if line:
-                            print(line, end='')
-                    else:
-                        line = " | ".join(
-                            f"{YELLOW}{field}: {GREEN}{event[field]:^10}{RESET}"
-                            for field, enabled in columns_to_print.items()
-                            if enabled
-                        )
-                        if line:
-                            print(line, end='')
-                
-                # print padding on last page
-                if current_page == pages-1 and padding > 0 and padding != visible_lines:
-                    for i in range(padding):
-                        print()
-
-                # print footer
-                if print_footer:
-                    print(f"{DISABLE}(Page {current_page+1}/{pages}){RESET}")
-
-                # read user input and take appropriate action
-                key = readchar.readkey()
-                if key == readchar.key.UP:
-                    next_selection = (current_selection - 1) % len(self.log_entries)
-                elif key == readchar.key.DOWN:
-                    next_selection = (current_selection + 1) % len(self.log_entries)
-                elif key == readchar.key.LEFT:
-                    next_page = (current_page - 1) % pages
-                elif key == readchar.key.RIGHT:
-                    next_page = (current_page + 1) % pages
-                elif key.lower() == 'q':
-                    return None
-                elif key == readchar.key.ENTER:
-                    selected_option = self.log_entries[current_selection]
-                    return selected_option
-                print(RESET_TERMINAL, end='')
-                print(HIDE_CURSOR, end='')
-
-        finally:
-            # always restore cursor
-            print(RESET_TERMINAL, end='')
-
 class Log:
-    def __init__(self, log_folder_path: str = None) -> None:
+    def __init__(self, app_name: str = None, log_folder_path: str = None) -> None:
         """
         Constructs a Log object:
             - creates the log file if it doesn't exist
@@ -513,17 +375,50 @@ class Log:
             - loads the next session number and the next entry number from the log file
 
         Parameters:
-            None            
+            app_name (str):             The name of the application using this module. Used to construct
+                                        the log directory following the XDG Base Directory
+                                        specification. Log files will be saved to XDG_STATE_HOME which
+                                        usually defaults to: '~/.local/state/<app_name>/logs'. Use only
+                                        one of the two parameters not both!
+
+            log_folder_path (str):      Optional custom directory for saving log files. Overrides the
+                                        default XDG-based directory. Using app_name is recommended for
+                                        consistent application file storage. Use only one of the two
+                                        parameters not both!
 
         Returns:
             None
         """
 
+        # validate arguments
+        if app_name is not None and log_folder_path is not None:
+            raise ValueError("use only one of the two parameters app_name or log_folder_path")
+        if app_name is not None and not isinstance(app_name, str):
+            raise TypeError("app_name must be a string")
+        if app_name == '':
+            raise ValueError("app_name cannot be an empty string")
+        for char in app_name:
+            if char == '/':
+                raise ValueError("app_name cannot contain a forward slash")
+            elif char == '.':
+                raise ValueError("app_name cannot contain a period")
+            elif char == ':':
+                raise ValueError("app_name cannot contain a colon")
+        if log_folder_path is not None and not isinstance(log_folder_path, str):
+            raise TypeError("log_folder_path must be a string")
+        if log_folder_path == '':
+            raise ValueError("log_folder_path cannot be an empty string")
+        
         # construct log file path
-        if log_folder_path:
-            self._log_folder_path = log_folder_path
+        if log_folder_path is not None:
+            self._log_folder_path = os.path.expanduser(log_folder_path)
+        elif app_name is None:
+            raise ValueError("either app_name or log_folder_path must be provided")
         else:
-            self._log_folder_path = os.path.join(os.getcwd(), "logs")
+            xdg_state_home = os.environ.get("XDG_STATE_HOME")
+            if not xdg_state_home:
+                xdg_state_home = os.path.join(os.path.expanduser("~"), ".local", "state")
+            self._log_folder_path = os.path.join(xdg_state_home, app_name, "logs")
 
         os.makedirs(self._log_folder_path, exist_ok=True)
         self._log_path = os.path.join(self._log_folder_path, "application.log")
@@ -560,20 +455,17 @@ class Log:
             self._logger.addHandler(handler)
 
         # load log state
-        self._raw_state = self._load_state()
-        self._next_entry_number = None
-        self._next_session_number = None
-        self.sessions = None
-        
-    def _load_state(self) -> dict:
+        self._next_entry_number, self._next_session_number  = self._load_state()
+    
+    def _load_state(self) -> tuple[int, int]:
         """
-        Opens the state file and returns the state of the log as a dictionary.
+        Opens the state file and returns the state of the log as a tuple.
 
         Parameters:
             None            
 
         Returns:
-            raw_state (dict):       A dictionary representing the log's raw state.
+            raw_state (tuple[int, int]):        The log's state as a tuple.
         """
 
         try:
@@ -582,27 +474,47 @@ class Log:
                 raw_state = json.load(f)
 
             # validate state
-            required_keys = {"next_entry_number", "next_session_number", "session_history"}
+            required_keys = {"next_entry_number", "next_session_number"}
             if not isinstance(raw_state, dict):
-                raise ValueError
+                raise ValueError("WARNING: The file `log_state.json` may be corrupted. "
+                                "The file will be overwritten.")
             if not required_keys <= raw_state.keys():
-                raise ValueError
+                raise ValueError("WARNING: The file `log_state.json` may be corrupted. "
+                                "The file will be overwritten.")
 
-        except (json.JSONDecodeError, OSError, ValueError):
-            raw_state = self._load_state_manually()
+            # extract values
+            next_entry_number = raw_state["next_entry_number"]
+            next_session_number = raw_state["next_session_number"]
 
-        return raw_state
+            # validate log state
+            if type(next_entry_number) is not int or next_entry_number < 1:
+                raise ValueError("invalid next entry number")
+            if type(next_session_number) is not int or next_session_number < 1:
+                raise ValueError("invalid next session number")
+
+            return next_entry_number, next_session_number
+
+        except (json.JSONDecodeError, ValueError):
+            if os.path.isfile(self._state_path):
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_path = os.path.join(self._log_folder_path,
+                                           f"{timestamp}_corrupted_log_state.json")
+                os.rename(self._state_path, backup_path)
+            return self._load_state_manually()
+        
+        except FileNotFoundError:
+            return self._load_state_manually()
 
     def _load_state_manually(self) -> tuple[int, int]:
         """
-        Opens the log file, checks the last entry, and returns the next session number and the next
-        entry number.
+        Opens the log file, checks the last entry, and returns the next entry number and the next
+        session number as a tuple.
 
         Parameters:
             None            
 
         Returns:
-            log_state (tuple[int, int]):    A tuple containing the next session number and next entry
+            log_state (tuple[int, int]):    A tuple containing the next entry number and next session
                                             number.
         """
         
@@ -616,28 +528,43 @@ class Log:
             # check last log entry
             last_log_entry = log_entries[-1]
 
-            # parse last session number
-            last_session_number = last_log_entry.split("SESSION#: ")
-            if len(last_session_number) < 2:
-                last_session_number = 1     # if log is corrupted restart count
-            else:
-                last_session_number = last_session_number[1]
-                last_session_number = last_session_number.split(" | ")[0]
-                next_session_number = int(last_session_number) + 1
-    
-            # parse last entry number
-            last_entry_number = last_log_entry.split("ENTRY#: ")
-            if len(last_entry_number) < 2:
-                last_entry_number = 1       # if log is corrupted restart count
-            else:
-                last_entry_number = last_entry_number[1]
-                last_entry_number = last_entry_number.split(" | ")[0]
-                next_entry_number = int(last_entry_number) + 1
+            # parse last session number and last entry number
+            _, remaining_entry = last_log_entry.split("SESSION#: ")
+            last_session_number, remaining_entry = remaining_entry.split(" | ENTRY#: ")
+            last_entry_number, _ = remaining_entry.split(" | REFERENCE#: ")
+            next_session_number = int(last_session_number) + 1
+            next_entry_number = int(last_entry_number) + 1
 
-            return next_session_number, next_entry_number
+            return next_entry_number, next_session_number
 
         except (FileNotFoundError, ValueError):
-            return 1,1
+            return 1, 1
+
+    def _save_state(self) -> None:
+        """
+        Saves the next entry number and next session number to the state file.
+
+        Parameters:
+            None            
+
+        Returns:
+            None
+        """
+
+        state = {"next_entry_number": self.next_entry_number, 
+                 "next_session_number": self.next_session_number}
+        temp_path = self._state_path + ".tmp"
+
+        try:
+            # wrtie to temp file first just in case
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent = 4)
+            os.replace(temp_path, self._state_path)
+
+        finally:
+            # delete temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
     
     def read(self) -> LogEntries:
         """
@@ -701,6 +628,7 @@ class Log:
         
         # increment next entry number after successful write
         self._next_entry_number += 1
+        self._save_state()
 
         return True
     
@@ -717,10 +645,13 @@ class Log:
         """
 
         self._next_session_number += 1
+        self._save_state()
 
 def to_log_entry(string_entry: str) -> LogEntry:
     """
-    Takes a log entry in string form, parses it, and returns it as a LogEntry object.
+    Takes a log entry in string form, parses it, and returns it as a LogEntry object. Importantly, the
+    string must contain all of the original eight LogEntry fields! So be careful when using the LogEntry
+    to_string() method that can remove fields.
 
     Parameters:
         string_entry (str):             A log entry in string form.
@@ -732,13 +663,20 @@ def to_log_entry(string_entry: str) -> LogEntry:
     try:
         # parse fields
         _, string_entry = string_entry.split("DATE: ")
-        date, string_entry = string_entry.split(" | LEVEL: ")
-        level, string_entry = string_entry.split(" | SCRIPT: ")
-        script, string_entry = string_entry.split(" | FUNCTION: ")
-        function, string_entry = string_entry.split(" | SESSION#: ")
-        session_number, string_entry = string_entry.split(" | ENTRY#: ")
-        entry_number, string_entry = string_entry.split(" | REFERENCE#: ")
-        reference_number, message = string_entry.split(" | MESSAGE: ")
+        date, string_entry = string_entry.split("LEVEL: ")
+        date = date[:-3]
+        level, string_entry = string_entry.split("SCRIPT: ")
+        level = level[:-3]
+        script, string_entry = string_entry.split("FUNCTION: ")
+        script = script[:-3]
+        function, string_entry = string_entry.split("SESSION#: ")
+        function = function[:-3]
+        session_number, string_entry = string_entry.split("ENTRY#: ")
+        session_number = session_number[:-3]
+        entry_number, string_entry = string_entry.split("REFERENCE#: ")
+        entry_number = entry_number[:-3]
+        reference_number, message = string_entry.split("MESSAGE: ")
+        reference_number = reference_number[:-3]
 
         # convert data types
         date = datetime.strptime(date, "%Y-%m-%d %I:%M:%S %p")
