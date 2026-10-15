@@ -5,6 +5,8 @@ the functions via an interactive demo, run this script.
 * print_and_wait(): Prints and then waits for the user to press any key.
 * select_option(): Allows the user to select an option from a list by using a text-based user
   interface (TUI).
+  * select_options(): Allows the user to select several options from a list by using a text-based user
+  interface (TUI).
 * select_folder(): Allows the user to select a folder in the file system by either using a
   text-based user interface (TUI) or by typing a folder path manually.
 * select_folder_using_tui(): Allows the user to select a folder in the file system by using a

@@ -376,15 +376,16 @@ class Log:
 
         Parameters:
             app_name (str):             The name of the application using this module. Used to construct
-                                        the log directory following the XDG Base Directory
-                                        specification. Log files will be saved to XDG_STATE_HOME which
-                                        usually defaults to: '~/.local/state/<app_name>/logs'. Use only
-                                        one of the two parameters not both!
+                                        the log directory following the conventions of the operating
+                                        system. On macOS, logs are stored in '~/Library/Logs/<app_name>.
+                                        On Linux, logs are stored in XDG_STATE_HOME which usually
+                                        defaults to: '~/.local/state/<app_name>/logs'. Use only one of
+                                        the two parameters not both!
 
             log_folder_path (str):      Optional custom directory for saving log files. Overrides the
-                                        default XDG-based directory. Using app_name is recommended for
-                                        consistent application file storage. Use only one of the two
-                                        parameters not both!
+                                        operating system's default log directory. Using app_name is
+                                        recommended for platform-appropriate storage. Use only one of
+                                        the two parameters not both!
 
         Returns:
             None
@@ -414,10 +415,13 @@ class Log:
             self._log_folder_path = os.path.expanduser(log_folder_path)
         elif app_name is None:
             raise ValueError("either app_name or log_folder_path must be provided")
+        elif sys.platform == "darwin":
+            self._log_folder_path = os.path.join(os.path.expanduser('~'),
+                                                 "Library", "Logs", app_name)
         else:
             xdg_state_home = os.environ.get("XDG_STATE_HOME")
             if not xdg_state_home:
-                xdg_state_home = os.path.join(os.path.expanduser("~"), ".local", "state")
+                xdg_state_home = os.path.join(os.path.expanduser('~'), ".local", "state")
             self._log_folder_path = os.path.join(xdg_state_home, app_name, "logs")
 
         os.makedirs(self._log_folder_path, exist_ok=True)
