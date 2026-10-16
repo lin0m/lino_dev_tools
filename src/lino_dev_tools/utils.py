@@ -495,7 +495,7 @@ def select_folder_using_tui(starting_dir:           str                     =   
                  "Q": "Quit"}
     folders = [folder for folder in os.listdir(current_directory) 
                 if os.path.isdir(os.path.join(current_directory, folder)) 
-                and (view_hidden_folders or folder[0:2] != "__")]
+                and (view_hidden_folders or not folder.startswith(('.', "__")))]
     folders.sort()
     ui_stack = []
     ui_stack.append(_TerminalUI(folders, error_message, header_message, current_directory, key_binds))
