@@ -10,6 +10,21 @@ This package is a collection of developer tools used for programming in Python. 
 
 The modules provided in this package can improve your already-built Python projects and make them easier to use. With time, you'll grow so accustomed to using this package that you'll always import it at the top of your scripts. If you're unsure, just download and run! The modules have built-in demo scripts that run when you simply run the modules.
 
+## Terminal UI Demo
+The TUI is implemented from scratch without relying on UI frameworks or libraries such as Tkinter, textual, or curses. Rendering, layout, pagination, and keyboard input is all implemented manually.
+
+The key binds and page index at the bottom re-arrange based on the terminal width.
+![Terminal UI resizing demo 1 gif](https://raw.githubusercontent.com/lin0m/repository_assets/main/lino_dev_tools/terminal_ui_resize_demo_1.gif)
+
+The visible content and number of pages adjusts based on the terminal height.
+![Terminal UI resizing demo 2 gif](https://raw.githubusercontent.com/lin0m/repository_assets/main/lino_dev_tools/terminal_ui_resize_demo_2.gif)
+
+When the terminal is too short, a warning is displayed and keyboard inputs are ignored to avoid unintentional commands.
+![Terminal UI resizing demo 3 gif](https://raw.githubusercontent.com/lin0m/repository_assets/main/lino_dev_tools/terminal_ui_resize_demo_3.gif)
+
+Custom validation functions and in-line error messages are supported.
+![Terminal UI validation demo gif](https://raw.githubusercontent.com/lin0m/repository_assets/main/lino_dev_tools/terminal_ui_validation_demo.gif)
+
 ## Installation
 
 ### Requirements:
