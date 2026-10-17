@@ -23,7 +23,6 @@ import select
 import shutil
 import signal
 import sys
-from time import sleep
 from typing import Any, Callable, TextIO
 
 # import unix specific modules
