@@ -15,9 +15,10 @@ Author: Lino Mercado_Esquivias
 from datetime import date, datetime, time, timedelta
 import json
 from lino_dev_tools.colors import *
+from lino_dev_tools.utils import select_option, select_options
 import logging
 import os
-from typing import Any
+from typing import Any, Callable
 
 # import third-party modules
 try:
@@ -208,7 +209,7 @@ class LogEntries:
         Returns:
             None
         """
-        self.log_entries = log_entries
+        self.entries = log_entries
 
     def dates(self) -> list[date]:
         """
@@ -222,7 +223,7 @@ class LogEntries:
             None
         """
 
-        dates = {entry.date.date() for entry in self.log_entries}
+        dates = {entry.date.date() for entry in self.entries}
 
         # when printed: print date.strftime("%b %d, %Y")
         return sorted(dates, reverse=True)
@@ -301,7 +302,7 @@ class LogEntries:
         
         # filter events
         matching_entries = []
-        for log_entry in self.log_entries:
+        for log_entry in self.entries:
             if date_filter and not (start_date <= log_entry.date < end_date):
                 continue
             if level_filter and log_entry.level not in level_filter:
@@ -706,3 +707,93 @@ def to_log_entry(string_entry: str) -> LogEntry:
     except:
         raise ValueError("The string entry provided was not in the correct format." \
                             "Make sure it contains all 8 fields.")
+
+def select_log_entry(log_entries:           LogEntries,
+                     header_message:        str = "Select a log entry from below.",
+                     validation_function:   Callable[[list[Any]], str]  = None
+                     ) -> LogEntry:
+    """
+    This function allows the user to select a LogEntry from a list of LogEntries by using a fancy
+    text-based user interface (TUI). This function is a wrapper around the select_option() function from
+    the lino_dev_tools utils module.
+
+    Parameters:
+        log_entries (LogEntries):                   The list of log entries to choose from.
+
+        header_message (str):                       Header message printed at the top. Despite
+                                                    defaulting to an empty string, header_message is
+                                                    initialized below in the validation section.
+
+        validation_function (Callable[[Any], str]): An optional function used to validate the user's
+                                                    selection. The function must return a string upon
+                                                    failure or None or emptry string on success. The
+                                                    string returned is printed as an error message up
+                                                    top in red.
+
+    Returns:
+        selected_entry (LogEntry):                  The selected LogEntry or `None` if the user selects
+                                                    the 'Go Back' option.
+    """
+
+    # validate arguments
+    if not isinstance(log_entries, LogEntries):
+        raise TypeError("log_entries must be a LogEntries object")
+    if len(log_entries.entries) < 2:
+        raise ValueError("log_entries must contain at least two elements")
+    if not isinstance(header_message, str):
+        raise TypeError("header must be a string")
+    if validation_function is not None and not callable(validation_function):
+        raise TypeError("validation_function must be None or a Callable that returns a string")
+
+    return select_option(log_entries, header_message, validation_function)
+
+def select_log_entries(log_entries:         LogEntries,
+                       header_message:      str                         = '',
+                       validation_function: Callable[[list[Any]], str]  = None,
+                       max_selections:      int                         = None
+                       ) -> LogEntries:
+    """
+    This function allows the user to select several LogEntries from a list of LogEntries by using a
+    fancy text-based user interface (TUI). This function is a wrapper around the select_options()
+    function from the lino_dev_tools utils module.
+
+    Parameters:
+        log_entries (LogEntries):                   The list of log entries to choose from.
+
+        header_message (str):                       Header message printed at the top. Despite
+                                                    defaulting to an empty string, header_message is
+                                                    initialized below in the validation section.
+
+        validation_function (Callable[[Any], str]): An optional function used to validate the user's
+                                                    selections. The function must return a string upon
+                                                    failure or None or emptry string on success. The
+                                                    string returned is printed as an error message up
+                                                    top in red.
+
+        max_selections (int):                       The maximum number of selections the user is allowed
+                                                    to make.
+
+    Returns:
+        selected_entries (LogEntries):              The selected LogEntries or `None` if the user
+                                                    selects the 'Go Back' option.
+    """
+
+    # validate arguments
+    if not isinstance(log_entries, LogEntries):
+        raise TypeError("log_entries must be a LogEntries object")
+    if len(log_entries.entries) < 2:
+        raise ValueError("log_entries must contain at least two elements")
+    if not isinstance(header_message, str):
+        raise TypeError("header must be a string")
+    if validation_function is not None and not callable(validation_function):
+        raise TypeError("validation_function must be None or a Callable that returns a string")
+    if not isinstance(max_selections, int) and max_selections is not None:
+        raise TypeError("max_selections must be an integer")
+    if max_selections is not None and max_selections <= 0:
+        raise ValueError("max_selections must be be greater than or equal to one")
+    if not header_message and max_selections:
+        header_message = f"Select up to {max_selections} log entries from below."
+    elif not header_message:
+        header_message = "Select log entries from below"
+
+    return select_options(log_entries, header_message, validation_function, max_selections)
