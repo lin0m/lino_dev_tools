@@ -20,16 +20,7 @@ import logging
 import os
 from typing import Any, Callable
 
-# import third-party modules
-try:
-    import readchar
-except ImportError as e:
-    raise ImportError(
-        "lino_dev_tools.logs requires the readchar module. Install " \
-        "it with: pip install readchar."
-    ) from e
-
-# re-export constants for ease of use
+# re-export logging module constants for ease of use
 DEBUG = logging.DEBUG
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -122,10 +113,13 @@ class LogEntry:
                   ) -> str:
         """
         Returns the LogEntry as a string. Optional parameters determine what fields are included in the
-        string.
+        string. Be careful when removing fields! In order to turn a string back into a LogEntry using
+        the to_log_entry() function, all eight fields must be present in the string! The to_log_entry()
+        function can safely handle any delimiter though.
 
         Parameters:
-            delimiter (str):                        The delimiter between each field.
+            delimiter (str):                        The delimiter between each field. One character
+                                                    long. Space is added before and after automatically.
 
             include_date (bool):                    Whether to include the date field in the string.
 
